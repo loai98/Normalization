@@ -16,8 +16,10 @@ public class NormailzerImp implements Normalizer {
         FileReader reader = null ;
         FileWriter writer = null ;
         CSVReader csvReader = null ;
-        int noOfRows=0, sumOfMarks= 0 ,idx = -1;
-        double mean = 0, sd=0;
+        int noOfRows=0, sumOfValues= 0 ,idx = -1;
+        double mean = 0, sd=0,
+                variance = 0,min=0,
+                max=0,median =0;
         ArrayList<String> colValue= new ArrayList<String>();
 
         try{
@@ -32,26 +34,45 @@ public class NormailzerImp implements Normalizer {
                 }
             }
 
+            // initialize min and max values
+            if ( (nextRecord =  csvReader.readNext()) != null){
+                min = Double.parseDouble(nextRecord[idx]);
+                max = Double.parseDouble(nextRecord[idx]);
+                colValue.add(nextRecord[idx]);
+                sumOfValues += Double.parseDouble(nextRecord[idx]);
+                noOfRows ++ ;
+            }
+
+
             // Get Sumation and number of rows to calculate mean
             while ( (nextRecord =  csvReader.readNext()) != null){
                 colValue.add(nextRecord[idx]);
-                sumOfMarks += Double.parseDouble(nextRecord[idx]);
+                sumOfValues += Double.parseDouble(nextRecord[idx]);
                 noOfRows ++ ;
 
             }
       //      noOfRows = colValue.size();
-            mean = sumOfMarks /noOfRows ;
+            mean = sumOfValues /noOfRows ;
             double sum = 0 ;
             // Calculate standard deviation
             for (String item : colValue){
                 double  value = Double.parseDouble(item);
                 sum += Math.pow(value - mean , 2);
             }
-            sd =  Math.sqrt(1.0/noOfRows * sum );
+            variance = sum / noOfRows ;
+            sd =  Math.sqrt(variance );
 
-
+            // Get median value ;
+            if(noOfRows % 2 == 0){
+                median = (Double.parseDouble( colValue.get(noOfRows/2)) + Double.parseDouble( colValue.get(noOfRows/2 -1))) / 2.0;
+            }else{
+                median = Double.parseDouble( colValue.get(noOfRows/2)) ;
+            }
             csvReader.close();
             reader.close();
+        }
+        catch (ArrayIndexOutOfBoundsException ex){
+            System.out.print("Invalid column name");
         }
         catch (Exception ex){
             System.out.println(ex.getMessage());
@@ -86,9 +107,8 @@ public class NormailzerImp implements Normalizer {
             System.out.println(ex);
         }
 
-        final  double  finalMean = mean;
-
-        double finalSd = sd;
+        double  finalMean = mean, finalSd = sd, finalVariance = variance ,
+                finalMin = min, finalMax = max, finalMedian = median;
         ScoringSummary scoringSummary = new ScoringSummary() {
             @Override
             public BigDecimal mean() {
@@ -97,27 +117,27 @@ public class NormailzerImp implements Normalizer {
 
             @Override
             public BigDecimal standardDeviation() {
-                return new BigDecimal(finalSd).setScale(2,BigDecimal.ROUND_HALF_EVEN );
+                return new BigDecimal(finalSd).setScale(2, BigDecimal.ROUND_HALF_EVEN);
             }
 
             @Override
             public BigDecimal variance() {
-                return null;
+                return new BigDecimal(finalVariance).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal median() {
-                return null;
+                return new BigDecimal(finalMedian).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal min() {
-                return null;
+                return new BigDecimal(finalMin).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal max() {
-                return null;
+                return new BigDecimal(finalMax).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
         };
 
@@ -129,12 +149,10 @@ public class NormailzerImp implements Normalizer {
         FileReader reader = null ;
         FileWriter writer = null ;
         CSVReader csvReader = null ;
-        int idx = -1,nOfRows=0;
-        double min =0, max=0 ,
-         mean =0, sum = 0, sd=0;
+        int idx = -1,noOfRows=0;
+        double min =0, max=0 , median =0,
+         mean =0, sum = 0, sd=0 , variance = 0 ;
         ArrayList<String> colValue= new ArrayList<String>();
-
-
 
         try{
             reader = new FileReader(csvPath.toString());
@@ -147,12 +165,12 @@ public class NormailzerImp implements Normalizer {
                 }
             }
             // Initialize min and max values ;
-
-            nextRecord = csvReader.readNext();
-            min = max = Double.parseDouble( nextRecord[idx] );
-            sum +=max ;
-            nOfRows++ ;
-            colValue.add(nextRecord[idx]);
+            if ( (nextRecord =  csvReader.readNext()) != null) {
+                min = max = Double.parseDouble(nextRecord[idx]);
+                sum += max;
+                noOfRows++;
+                colValue.add(nextRecord[idx]);
+            }
 
 
             // get Min(x) and Max(x) value
@@ -165,17 +183,26 @@ public class NormailzerImp implements Normalizer {
                 }
                 colValue.add(nextRecord[idx]);
                 sum +=value ;
-                nOfRows ++ ;
+                noOfRows ++ ;
             }
-            mean = sum/nOfRows ;
-
+            mean = sum/noOfRows ;
             sum=0;
             for (String item : colValue){
                 double  value = Double.parseDouble(item);
                 sum += Math.pow(value - mean , 2);
             }
-            sd =  Math.sqrt(1.0/nOfRows * sum );
+            variance = sum/ noOfRows ;
+            sd =  Math.sqrt(variance );
 
+            // Get median value ;
+            if(noOfRows % 2 == 0){
+                median = (Double.parseDouble( colValue.get(noOfRows/2)) + Double.parseDouble( colValue.get(noOfRows/2 -1))) / 2.0;
+            }else{
+                median = Double.parseDouble( colValue.get(noOfRows/2)) ;
+            }
+
+        }catch (ArrayIndexOutOfBoundsException ex){
+            System.out.print("Invalid column name");
         }
         catch (Exception ex){
             System.out.println(ex.getMessage());
@@ -203,15 +230,16 @@ public class NormailzerImp implements Normalizer {
                 csvWriter.writeNext(finalData,false);
 
             }
-
             writer.close();
 
         }catch (Exception ex){
             System.out.println(ex);
         }
 
-        double finalMean = mean;
-        double finalSd = sd;
+        double finalMean = mean, finalSd = sd,
+                finalMin = min, finalMax = max,
+                finalVariance = variance,
+                finalMedian = median;
         return new ScoringSummary() {
             @Override
             public BigDecimal mean() {
@@ -221,27 +249,27 @@ public class NormailzerImp implements Normalizer {
 
             @Override
             public BigDecimal standardDeviation() {
-                return new BigDecimal(finalSd).setScale(2,BigDecimal.ROUND_HALF_EVEN );
+                return new BigDecimal(finalSd).setScale(2, BigDecimal.ROUND_HALF_EVEN);
             }
 
             @Override
             public BigDecimal variance() {
-                return null;
+                return new BigDecimal(finalVariance).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal median() {
-                return null;
+                return new BigDecimal(finalMedian).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal min() {
-                return null;
+                return new BigDecimal(finalMin).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
 
             @Override
             public BigDecimal max() {
-                return null;
+               return new BigDecimal(finalMax).setScale(2,BigDecimal.ROUND_HALF_EVEN );
             }
         };
     }
