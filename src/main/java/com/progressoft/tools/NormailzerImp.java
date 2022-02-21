@@ -8,7 +8,8 @@ import java.io.FileWriter;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class NormailzerImp implements Normalizer {
     @Override
@@ -16,11 +17,11 @@ public class NormailzerImp implements Normalizer {
         FileReader reader = null ;
         FileWriter writer = null ;
         CSVReader csvReader = null ;
-        int noOfRows=0, sumOfValues= 0 ,idx = -1;
-        double mean = 0, sd=0,
+        int noOfRows=0 ,idx = -1;
+        double mean = 0, sd=0, sumOfValues= 0 ,
                 variance = 0,min=0,
                 max=0,median =0;
-        ArrayList<String> colValue= new ArrayList<String>();
+        ArrayList<Double> colValue= new ArrayList<Double>();
 
         try{
             reader = new FileReader(csvPath.toString());
@@ -36,18 +37,25 @@ public class NormailzerImp implements Normalizer {
 
             // initialize min and max values
             if ( (nextRecord =  csvReader.readNext()) != null){
-                min = Double.parseDouble(nextRecord[idx]);
-                max = Double.parseDouble(nextRecord[idx]);
-                colValue.add(nextRecord[idx]);
-                sumOfValues += Double.parseDouble(nextRecord[idx]);
+                double  value = Double.parseDouble(nextRecord[idx]);
+                min = max = value ;
+                colValue.add(value);
+                sumOfValues += value;
                 noOfRows ++ ;
             }
 
 
             // Get Sumation and number of rows to calculate mean
             while ( (nextRecord =  csvReader.readNext()) != null){
-                colValue.add(nextRecord[idx]);
-                sumOfValues += Double.parseDouble(nextRecord[idx]);
+                double value = Double.parseDouble(nextRecord[idx]);
+                if(value > max){
+                    max = value;
+                }
+                if (value < min){
+                    min = value ;
+                }
+                colValue.add(value);
+                sumOfValues +=value;
                 noOfRows ++ ;
 
             }
@@ -55,18 +63,18 @@ public class NormailzerImp implements Normalizer {
             mean = sumOfValues /noOfRows ;
             double sum = 0 ;
             // Calculate standard deviation
-            for (String item : colValue){
-                double  value = Double.parseDouble(item);
-                sum += Math.pow(value - mean , 2);
+            for (Double item : colValue){
+                sum += Math.pow(item - mean , 2);
             }
             variance = sum / noOfRows ;
             sd =  Math.sqrt(variance );
 
             // Get median value ;
+            Collections.sort(colValue);
             if(noOfRows % 2 == 0){
-                median = (Double.parseDouble( colValue.get(noOfRows/2)) + Double.parseDouble( colValue.get(noOfRows/2 -1))) / 2.0;
+                median = ( colValue.get(noOfRows/2)+ colValue.get(noOfRows/2 -1))/ 2.0;
             }else{
-                median = Double.parseDouble( colValue.get(noOfRows/2)) ;
+                median = colValue.get(noOfRows/2) ;
             }
             csvReader.close();
             reader.close();
@@ -86,18 +94,18 @@ public class NormailzerImp implements Normalizer {
             csvReader = new CSVReader(reader);
 
             // copy Header ;
-            String [] nexRecord = csvReader.readNext();
-            String [] finalData = Arrays.copyOf(nexRecord, nexRecord.length+1);
-            finalData[nexRecord.length] = colToStandardize+"_z";
-            csvWriter.writeNext(finalData,false);
+            String [] nexRecord = csvReader.readNext() ;
+            ArrayList<String> finalData =new ArrayList<String >(List.of(nexRecord));
+            finalData.add(idx +1, colToStandardize+"_z");
+            csvWriter.writeNext(finalData.toArray(nexRecord),false);
 
             // Copy file rows
             while ((nexRecord = csvReader.readNext() )!= null){
-                finalData = Arrays.copyOf(nexRecord, nexRecord.length+1);
-                finalData[nexRecord.length] =
-                        String.valueOf(new BigDecimal((Double.parseDouble(nexRecord[idx]) - mean ) / sd )
-                                .setScale(2,BigDecimal.ROUND_HALF_EVEN ));
-                csvWriter.writeNext(finalData,false);
+                finalData = new ArrayList<String >(List.of(nexRecord));
+                finalData.add(idx + 1,String.valueOf(new BigDecimal((Double.parseDouble(nexRecord[idx]) - mean ) / sd )
+                        .setScale(2,BigDecimal.ROUND_HALF_EVEN )) );
+
+                csvWriter.writeNext(finalData.toArray(nexRecord),false);
             }
 
 
@@ -152,7 +160,7 @@ public class NormailzerImp implements Normalizer {
         int idx = -1,noOfRows=0;
         double min =0, max=0 , median =0,
          mean =0, sum = 0, sd=0 , variance = 0 ;
-        ArrayList<String> colValue= new ArrayList<String>();
+        ArrayList<Double> colValue= new ArrayList<Double>();
 
         try{
             reader = new FileReader(csvPath.toString());
@@ -166,10 +174,11 @@ public class NormailzerImp implements Normalizer {
             }
             // Initialize min and max values ;
             if ( (nextRecord =  csvReader.readNext()) != null) {
-                min = max = Double.parseDouble(nextRecord[idx]);
-                sum += max;
+                double value = Double.parseDouble(nextRecord[idx]);
+                min = max = value;
+                sum += value;
                 noOfRows++;
-                colValue.add(nextRecord[idx]);
+                colValue.add(value);
             }
 
 
@@ -178,27 +187,28 @@ public class NormailzerImp implements Normalizer {
                 double value = Double.parseDouble(nextRecord[idx]);
                 if(value > max){
                     max = value;
-                }else if (value < min){
+                }
+                if (value < min){
                     min = value ;
                 }
-                colValue.add(nextRecord[idx]);
+                colValue.add(value);
                 sum +=value ;
                 noOfRows ++ ;
             }
             mean = sum/noOfRows ;
             sum=0;
-            for (String item : colValue){
-                double  value = Double.parseDouble(item);
-                sum += Math.pow(value - mean , 2);
+            for (Double item : colValue){
+                sum += Math.pow(item - mean , 2);
             }
             variance = sum/ noOfRows ;
             sd =  Math.sqrt(variance );
 
             // Get median value ;
+            Collections.sort(colValue);
             if(noOfRows % 2 == 0){
-                median = (Double.parseDouble( colValue.get(noOfRows/2)) + Double.parseDouble( colValue.get(noOfRows/2 -1))) / 2.0;
+                median = (colValue.get(noOfRows/2) + colValue.get(noOfRows/2 -1)) / 2.0;
             }else{
-                median = Double.parseDouble( colValue.get(noOfRows/2)) ;
+                median =colValue.get(noOfRows/2);
             }
 
         }catch (ArrayIndexOutOfBoundsException ex){
@@ -215,21 +225,20 @@ public class NormailzerImp implements Normalizer {
             csvReader = new CSVReader(reader);
 
             // copy Header ;
+            String [] nexRecord = csvReader.readNext() ;
+            ArrayList<String> finalData =new ArrayList<String >(List.of(nexRecord));
+            finalData.add(idx+1, colToNormalize+"_mm");
+            csvWriter.writeNext(finalData.toArray(nexRecord),false);
 
-            String [] nexRecord = csvReader.readNext();
-            String [] finalData = Arrays.copyOf(nexRecord, nexRecord.length+1);
-            finalData[nexRecord.length] = colToNormalize + "_mm";
-            csvWriter.writeNext(finalData,false);
-
+            // Copy file rows
             while ((nexRecord = csvReader.readNext() )!= null){
-                finalData = Arrays.copyOf(nexRecord, nexRecord.length+1);
                 double value = Double.parseDouble(nexRecord[idx]) ;
-                finalData[nexRecord.length] =
-                        String.valueOf(new BigDecimal(( value - min ) / (max - min))
-                                .setScale(2,BigDecimal.ROUND_HALF_EVEN ));
-                csvWriter.writeNext(finalData,false);
-
+                finalData = new ArrayList<String >(List.of(nexRecord));
+                finalData.add(idx+1,String.valueOf(new BigDecimal(( value - min ) / (max - min))
+                        .setScale(2,BigDecimal.ROUND_HALF_EVEN )) );
+                csvWriter.writeNext(finalData.toArray(nexRecord),false);
             }
+
             writer.close();
 
         }catch (Exception ex){
